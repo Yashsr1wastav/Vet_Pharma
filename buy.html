@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buy Medicine</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f8f9fa;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 50px auto;
+      background-color: #fff;
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #333;
+    }
+    #productDetails {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .quantity-control {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .quantity-button {
+      border: 1px solid #007bff;
+      background-color: #007bff;
+      color: #fff;
+      padding: 10px 15px;
+      cursor: pointer;
+      font-size: 18px;
+      border-radius: 5px;
+      transition: background-color 0.3s ease;
+    }
+    .quantity-button:hover {
+      background-color: #0056b3;
+    }
+    .quantity-display {
+      width: 50px;
+      text-align: center;
+      font-size: 18px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 5px;
+      margin: 0 10px;
+    }
+    #totalPrice {
+      text-align: center;
+      font-size: 20px;
+      margin-bottom: 20px;
+      color: #333;
+    }
+    #purchaseButton {
+      display: block;
+      width: 100%;
+      background-color: #28a745;
+      color: #fff;
+      padding: 10px;
+      font-size: 18px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    #purchaseButton:hover {
+      background-color: #218838;
+    }
+  </style>
+  <script src="https://js.stripe.com/v3/"></script> <!-- Include Stripe.js -->
+</head>
+<body>
+
+  <div class="container">
+    <h2>Purchase Medicine</h2>
+    <div id="productDetails"></div>
+    
+    <div class="quantity-control">
+      <button id="decreaseButton" class="quantity-button">-</button>
+      <input type="number" id="quantityInput" class="quantity-display" value="1" min="1" readonly>
+      <button id="increaseButton" class="quantity-button">+</button>
+    </div>
+    
+    <h4 id="totalPrice"></h4>
+    
+    <button id="purchaseButton" class="btn btn-primary">Purchase</button>
+  </div>
+
+  <script>
+    const stripe = Stripe('pk_test_51Pkpy0JuW53wjHdPQcgNWWDO1q7JA2LjNQxlwAFmRlTsjJfXwzjPgno60k453pHNWTiqkKWF0jMqALm6tShlP7g400ZmjRZs3v'); // Replace with your public key
+
+    // Get the URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const productId = urlParams.get('productId');
+
+    // Mock product data
+    const products = {
+      1: { name: "Health Product 1", price: 1499, description: "Description for product 1." },
+      2: { name: "Health Product 2", price: 599, description: "Description for product 2." },
+    };
+
+    // Display product details based on product ID
+    const product = products[productId];
+    if (product) {
+      document.getElementById('productDetails').innerHTML = `
+        <h3>${product.name}</h3>
+        <p>Price: ₹${product.price}</p>
+        <p>${product.description}</p>
+      `;
+      updateTotalPrice(product.price, 1); // Initial total price
+    } else {
+      document.getElementById('productDetails').innerHTML = '<p>Product not found.</p>';
+    }
+
+    // Function to update total price
+    function updateTotalPrice(price, quantity) {
+      const total = price * quantity;
+      document.getElementById('totalPrice').innerText = `Total Price: ₹${total}`;
+    }
+
+    // Quantity management
+    let quantity = 1;
+
+    document.getElementById('increaseButton').onclick = function() {
+      quantity++;
+      document.getElementById('quantityInput').value = quantity;
+      updateTotalPrice(product.price, quantity);
+    };
+
+    document.getElementById('decreaseButton').onclick = function() {
+      if (quantity > 1) {
+        quantity--;
+        document.getElementById('quantityInput').value = quantity;
+        updateTotalPrice(product.price, quantity);
+      }
+    };
+
+    // Purchase button functionality
+    document.getElementById('purchaseButton').onclick = async function() {
+      const response = await fetch('http://127.0.0.1:3000/create-checkout-session', { // Replace with your backend URL
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: product.price * quantity * 100, // amount in paise
+        }),
+      });
+
+      const sessionId = await response.json();
+
+      // Redirect to Checkout
+      const { error } = await stripe.redirectToCheckout({ sessionId });
+      if (error) {
+        alert(error.message);
+      }
+    };
+  </script>
+
+</body>
+</html>
